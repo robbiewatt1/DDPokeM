@@ -148,12 +148,14 @@ class UNet(nn.Module):
         attention_heads=4,
         dropout_rate=0.1,
         time_multiple=4,
+        total_time_steps=4000
     ):
         super().__init__()
 
         time_emb_dims_exp = base_channels * time_multiple
         self.time_embeddings = SinusoidalPositionEmbeddings(
-            time_emb_dims=base_channels, time_emb_dims_exp=time_emb_dims_exp)
+            total_time_steps=total_time_steps, time_emb_dims=base_channels,
+            time_emb_dims_exp=time_emb_dims_exp)
 
         self.first = nn.Conv2d(in_channels=input_channels,
                                out_channels=base_channels, kernel_size=3,

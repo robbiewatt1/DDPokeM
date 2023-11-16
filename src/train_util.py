@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 
 def train_step(model, diffusion, data_loader, optimiser, step,
-                    writer=None):
+               writer=None):
     """
     Function for a single training step.
     :param model: instance of the Unet class
@@ -73,6 +73,7 @@ def sample_step(model, diffusion, n_sample):
     ax.axis('off')
     return fig, ax
 
+
 def train_generator():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -81,6 +82,7 @@ def train_generator():
     learning_rate = 1e-4
     num_epochs = 10000
     num_diffusion_timesteps = 4000
+    image_shape = (3, 64, 64)
     unet_model = UNet(output_channels=6, num_res_blocks=2)
     unet_model.to(device)
 
@@ -91,18 +93,27 @@ def train_generator():
     optimiser = torch.optim.Adam(unet_model.parameters(), lr=learning_rate)
     writer = SummaryWriter("./runs")
 
-    diffusion = Diffusion(num_diffusion_timesteps, (3, 64, 64),
+    diffusion = Diffusion(num_diffusion_timesteps, image_shape,
                           device=device, betas_method="cosine",
                           var_method="learned", loss_method="both")
 
+    losses = []
     for epoch in range(num_epochs):
-        train_step(unet_model, diffusion, dataloader, optimiser, epoch,
+        loss = train_step(unet_model, diffusion, dataloader, optimiser, epoch,
                    writer=writer)
+        losses.append(loss)
 
         if epoch % 100 == 0:
             fig, ax = sample_step(unet_model, diffusion, 16)
             fig.savefig(f"./results/{epoch}.png", dpi=300)
             plt.close(fig)
+
+        # save the model
+        if losses[-1] == min(losses):
+            torch.save(unet_model.state_dict(), f"./Models/best_model.pt")
+        if (epoch + 1) % 1000 == 0:
+            torch.save(unet_model.state_dict(), f"./Models/{epoch}.pt")
+
 
 if __name__ == "__main__":
     train_generator()

@@ -261,7 +261,6 @@ class Diffusion:
             model, x_t, t, model_kwargs)
         kl = self._kl_divergence(true_mean, torch.exp(log_true_var),
                                  model_mean, model_var)
-        # maybe rescale 0 term later
         return kl.mean(), pred_start
 
     @staticmethod

@@ -141,12 +141,12 @@ class UNet(nn.Module):
         self,
         input_channels=3,
         output_channels=3,
-        num_res_blocks=3,
+        num_res_blocks=6,
         base_channels=128,
         base_channels_multiples=(1, 2, 4, 8),
         apply_attention=(False, False, False, True),
         attention_heads=4,
-        dropout_rate=0.1,
+        dropout_rate=0.05,
         time_multiple=4,
         total_time_steps=4000
     ):
@@ -264,3 +264,19 @@ class UNet(nn.Module):
     def forward(self, x, t):
         time_emb = self.time_embeddings(t)
         return self.base_forward(x, time_emb)
+
+
+class ConditionalUNet(nn.Module):
+
+    """
+    Conditional UNet that takes in an image to condition on
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.base_unet = UNet(**kwargs)
+
+    def forward(self, x, t, condition_image):
+        time_emb = self.base_unet.time_embeddings(t)
+        x = torch.cat((x, condition_image), dim=1)
+        return self.base_unet.base_forward(x, time_emb)

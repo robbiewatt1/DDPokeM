@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 
 def train_step(model, diffusion, data_loader, optimiser, step,
-               writer=None):
+               writer=None, batch_multiplier=1):
     """
     Function for a single training step.
     :param model: instance of the Unet class
@@ -19,6 +19,7 @@ def train_step(model, diffusion, data_loader, optimiser, step,
     :param optimiser: optimiser to use
     :param step: current step
     :param writer: tensorboard writer
+    :param batch_multiplier: number of batches to accumulate gradients over
     :return: loss value
     """
 
@@ -36,7 +37,7 @@ def train_step(model, diffusion, data_loader, optimiser, step,
             loss = diffusion.training_loss(model, image, time)
             loss.backward()
 
-            if (i + 1) % 2 == 0:
+            if (i + 1) % batch_multiplier == 0:
                 optimiser.step()
                 optimiser.zero_grad()
 
@@ -64,8 +65,7 @@ def sample_step(model, diffusion, n_sample):
     model.eval()
 
     images = diffusion.p_sample_full(model, n_sample)
-    images = (PokemonDataset.inverse_transform(images) / 255.
-              )
+    images = PokemonDataset.inverse_transform(images) / 255.
     fig, ax = plt.subplots(figsize=(20, 8), facecolor='white')
     grid_img = torchvision.utils.make_grid(
         images, nrow=images.shape[0]//2, padding=True, pad_value=1)
@@ -78,18 +78,20 @@ def train_generator():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Hyperparameters
-    batch_size = 64
+    batch_size = 128
     learning_rate = 1e-4
     num_epochs = 10000
     num_diffusion_timesteps = 4000
-    image_shape = (3, 64, 64)
-    unet_model = UNet(output_channels=6, num_res_blocks=2)
+    image_shape = (3, 32, 32)
+
+    # I want this to now run on multiple GPUs
+    unet_model = UNet(output_channels=6, num_res_blocks=4, base_channels=128)
     unet_model.to(device)
 
-    dataset = PokemonDataset()
+    dataset = PokemonDataset(image_shape=(image_shape[1], image_shape[2]))
 
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                             shuffle=True, num_workers=4)
+                                             shuffle=True, num_workers=8)
     optimiser = torch.optim.Adam(unet_model.parameters(), lr=learning_rate)
     writer = SummaryWriter("./runs")
 

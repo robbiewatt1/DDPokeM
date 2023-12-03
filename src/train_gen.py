@@ -4,6 +4,8 @@ from UNet import UNet
 from Dataset import PokemonDataset
 from Diffusion import Diffusion
 import matplotlib.pyplot as plt
+import sys
+
 
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -78,14 +80,26 @@ def train_generator():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Hyperparameters
-    batch_size = 128
+    batch_size = 32
     learning_rate = 1e-4
-    num_epochs = 10000
+    num_epochs = 1000
     num_diffusion_timesteps = 4000
-    image_shape = (3, 32, 32)
+    image_shape = (3, 128, 128)
 
-    # I want this to now run on multiple GPUs
-    unet_model = UNet(output_channels=6, num_res_blocks=4, base_channels=128)
+    if "-use_pretrained" in sys.argv:
+        from diffusers import UNet2DModel
+
+        model_id = "google/ddpm-cat-256"
+        unet_model = UNet2DModel.from_pretrained(
+            model_id,
+            in_channels=3,
+            out_channels=6,
+            low_cpu_mem_usage=False,
+            ignore_mismatched_sizes=True,
+            use_safetensors=True,
+        )
+    else:
+        unet_model = UNet(output_channels=6, num_res_blocks=3, base_channels=64)
     unet_model.to(device)
 
     dataset = PokemonDataset(image_shape=(image_shape[1], image_shape[2]))
@@ -102,7 +116,7 @@ def train_generator():
     losses = []
     for epoch in range(num_epochs):
         loss = train_step(unet_model, diffusion, dataloader, optimiser, epoch,
-                   writer=writer)
+                   writer=writer, batch_multiplier=4)
         losses.append(loss)
 
         if epoch % 100 == 0:
@@ -112,9 +126,9 @@ def train_generator():
 
         # save the model
         if losses[-1] == min(losses):
-            torch.save(unet_model.state_dict(), f"./Models/best_model.pt")
-        if (epoch + 1) % 1000 == 0:
-            torch.save(unet_model.state_dict(), f"./Models/{epoch}.pt")
+            torch.save(unet_model.state_dict(), f"./Models/best_model2.pt")
+        if (epoch + 1) % 100 == 0:
+            torch.save(unet_model.state_dict(), f"./Models/{epoch}_2.pt")
 
 
 if __name__ == "__main__":

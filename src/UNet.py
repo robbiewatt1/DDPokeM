@@ -144,9 +144,9 @@ class UNet(nn.Module):
         num_res_blocks=6,
         base_channels=128,
         base_channels_multiples=(1, 2, 4, 8),
-        apply_attention=(False, False, False, True),
+        apply_attention=(False, False, True, True),
         attention_heads=4,
-        dropout_rate=0.05,
+        dropout_rate=0.1,
         time_multiple=4,
         total_time_steps=4000
     ):

@@ -9,7 +9,7 @@ class PokemonDataset(torch.utils.data.Dataset):
     source https://huggingface.co/datasets/huggan/pokemon.
     """
 
-    def __init__(self, image_shape=(32, 32)):
+    def __init__(self, image_shape=(64, 64)):
         super().__init__()
         """
         :param path: path to the dataset
@@ -17,13 +17,14 @@ class PokemonDataset(torch.utils.data.Dataset):
         """
         dataset = load_dataset('huggan/pokemon', split='train')
         self.data = dataset['image']
-
         self.transform = torchvision.transforms.Compose([
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Lambda(lambda t: t.float()),
-            torchvision.transforms.Resize(image_shape,
-             interpolation=torchvision.transforms.InterpolationMode.BILINEAR,
-             antialias=True),
+            torchvision.transforms.Resize(
+                image_shape,
+                interpolation=torchvision.transforms.InterpolationMode.BILINEAR,
+                antialias=True),
+            torchvision.transforms.RandomRotation(30, fill=1),
             torchvision.transforms.RandomHorizontalFlip(p=0.5),
             torchvision.transforms.Lambda(lambda t: (t * 2.) - 1.),
         ])
@@ -58,8 +59,8 @@ class PokemonUpscaleDataset(torch.utils.data.Dataset):
         self.data = dataset['image']
         to_tensor = torchvision.transforms.ToTensor()
         for i, image in enumerate(self.data):
-            if (to_tensor(image).shape[1] < 128
-                    or to_tensor(image).shape[2] < 128):
+            if (to_tensor(image).shape[1] < output_shape[0]
+                    or to_tensor(image).shape[2] < output_shape[1]):
                 self.data.pop(i)
 
         self.base_transform = torchvision.transforms.Compose([
@@ -96,4 +97,13 @@ class PokemonUpscaleDataset(torch.utils.data.Dataset):
     @staticmethod
     def inverse_transform(image):
         """Convert tensors from [-1., 1.] to [0., 255.]"""
-        return ((image.clamp(-1, 1) + 1.0) / 2.0) * 255.0
+        return (image.clamp(-1, 1) + 1.0) / 2.0
+
+
+if __name__ == "__main__":
+    dset = PokemonDataset()
+    print(torch.min(dset[0]), torch.max(dset[0]))
+    import matplotlib.pyplot as plt
+    plt.imshow(PokemonUpscaleDataset.inverse_transform(dset[0]).permute(1, 2,
+                                                                        0))
+    plt.show()

@@ -39,6 +39,8 @@ def train_step(model, diffusion, data_loader, optimiser, step,
                 interpolation=torchvision.transforms.InterpolationMode.BILINEAR,
                 antialias=True)
 
+            image_high = image_high - image_low
+
             # Maybe do residual here?
             time = torch.randint(0, diffusion.steps, (image_low.shape[0],),
                                  device=diffusion.device)
@@ -92,6 +94,9 @@ def sample_step(model, diffusion, dataloader, n_sample):
 
     images = diffusion.p_sample_full(
         model, n_sample, model_kwargs={"condition_image": images_low})
+
+    images = images + images_low
+
     images = (PokemonUpscaleDataset.inverse_transform(images) / 255.)
 
     images = (torch.stack([image_low_plot, images, images_high], dim=1)
@@ -112,7 +117,7 @@ def train_up_sample():
     batch_size = 32
     learning_rate = 1e-4
     num_epochs = 10000
-    num_diffusion_timesteps = 40
+    num_diffusion_timesteps = 4000
     in_shape, out_shape = (3, 32, 32), (3, 128, 128)
 
     # I want this to now run on multiple GPUs

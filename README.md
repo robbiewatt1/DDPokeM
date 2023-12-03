@@ -15,5 +15,5 @@ This should produce images similar to the following:
 ![plot](./results/pokemon.png)
 
 The model seems to be doing an ok job at generating new Pokemon, but most of 
-them seem to resemble a colourful forms of Muk. This is likely due to the 
+them seem to resemble colourful forms of Muk. This is likely due to the 
 relatively small dataset size.
